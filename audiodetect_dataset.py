@@ -61,16 +61,11 @@ class animalSoundsDataset(Dataset):
         '''
         file_path = self.audio_data["path"][index]
         last_dir_in_path = os.path.split(file_path)[1]
-        extension = os.path.splitext(file_path)[1]
-        return f'{last_dir_in_path}{extension}'
+        return {last_dir_in_path}
 
-N_FFT = 4096
-N_HOP = 4
-stft = torchaudio.transforms.Spectrogram(
-    n_fft=N_FFT,
-    hop_length=N_HOP,
-    power=None,
-)
+    def get_full_file_path(self, index):
+        return self.audio_data["path"][index]
+
 
 def plot_specgram(waveform, sample_rate, title="Spectrogram"):
     waveform = waveform.numpy()
@@ -85,17 +80,19 @@ def plot_specgram(waveform, sample_rate, title="Spectrogram"):
         if num_channels > 1:
             axes[c].set_ylabel(f"Channel {c+1}")
     figure.suptitle(title)
-    plt.show()
+    return figure, axes
 
 
 # for bugfixing, visualise the waves.
 if __name__ == '__main__':
-    print(torchaudio.list_audio_backends())
 
     data = animalSoundsDataset(root_dir="Animal-Sound-Dataset")
-    index = 761
-    sample = data.__getitem__(index)
-    filename=data.get_filename(index)
-    audio, sample_rate = sample["audio"]
-    plot_specgram(audio, sample_rate, title=f"spectrogram of {filename}")
+    for index in (1, 100, 400, 800):
+        sample = data.__getitem__(index)
+        filename = data.get_filename(index)
+        full_file_url = data.get_full_file_path(index)
+        print(f"{filename}: {torchaudio.info(full_file_url)}")
+        audio, sample_rate = sample["audio"]
+        plot_specgram(audio, sample_rate, title=f"spectrogram of {filename}")
+
 
