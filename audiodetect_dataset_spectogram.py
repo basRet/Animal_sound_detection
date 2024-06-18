@@ -20,21 +20,30 @@ class animalSoundsDataset(Dataset):
         self.root_dir = root_dir
         self.transform = transform
         self.audio_data = self.get_files_dataframe()
+        self.spec_transform = torchaudio.transforms.Spectrogram(n_fft=800)
+
 
     def __len__(self):
         return self.length_dataset
+
+    def make_spect(self, waveform, sample_rate):
+        if not torch.is_tensor(waveform):
+            waveform = torch.tensor(waveform)
+        spectrogram = self.spec_transform(waveform)
+        return spectrogram
 
     def __getitem__(self, index):
         # do some transformations later when it's somewhat working
         if torch.is_tensor(index):
             index = index.tolist()  # necessary, since sometimes getitem is called with tensors to improve proecssing times
 
-        audio = torchaudio.load(self.audio_data["path"][index])
+        waveform, sample_rate = torchaudio.load(self.audio_data["path"][index])
+        image = self.make_spect(waveform, sample_rate)
         label = self.audio_data["label"][index]
-        sample = {'audio': audio, 'label': label}
+        sample = {'spect': image, 'sample_rate': sample_rate, 'label': label}
 
         if self.transform:
-            sample = self.transform(audio)
+            sample = self.transform(image)
 
         return sample
 
@@ -67,33 +76,39 @@ class animalSoundsDataset(Dataset):
         return self.audio_data["path"][index]
 
 
-def plot_specgram(waveform, sample_rate, title="Spectrogram"):
-    waveform = waveform.numpy()
+def plot_spectrogram(spectrogram, sample_rate, n_fft=800, enable_db=True):
 
-    num_channels, num_frames = waveform.shape
+    if not torch.is_tensor(spectrogram):
+        spectrogram = torch.tensor(spectrogram)
 
-    figure, axes = plt.subplots(num_channels, 1)
-    if num_channels == 1:
-        axes = [axes]
-    for c in range(num_channels):
-        axes[c].specgram(waveform[c], Fs=sample_rate)
-        if num_channels > 1:
-            axes[c].set_ylabel(f"Channel {c+1}")
-    figure.suptitle(title)
-    return figure, axes
+    if enable_db:
+        #Converts spectrogram to decibels for better visualization
+        spectrogram_db = torchaudio.transforms.AmplitudeToDB()(spectrogram)
+        plt.figure(figsize=(10, 5))
+        plt.imshow(spectrogram_db[0, :, :].detach().numpy(), cmap='viridis', aspect='auto', origin='lower')
+    else:
+        plt.figure(figsize=(10, 5))
+        plt.imshow(spectrogram[0, :, :].detach().numpy(), cmap='viridis', aspect='auto', origin='lower')
+
+    #get only the first audio channel and detach incase pytorch does something fucky to the tensors
+    plt.colorbar(format='%+2.0f dB')
+    plt.title("Spectrogram (dB)")
+    plt.ylabel("Frequency (Hz)")
+    plt.xlabel("Frame")
+
+    #Correct scaling
+    num_freq_bins = spectrogram.shape[1]
+    freqs = np.linspace(0, sample_rate / 2, num_freq_bins)
+    plt.yticks(np.linspace(0, num_freq_bins - 1, 10), labels=np.round(np.linspace(0, sample_rate / 2, 10)).astype(int))
+
+    plt.show()
 
 
 # for bugfixing, visualise the waves.
 if __name__ == '__main__':
-    print(str(torchaudio.list_audio_backends()))
     data = animalSoundsDataset(root_dir="Animal-Sound-Dataset")
-    for index in (3, 3):
-        sample = data.__getitem__(index)
-        filename = data.get_filename(index)
-        full_file_url = data.get_full_file_path(index)
-        print(f"{filename}: {torchaudio.info(full_file_url)}")
-        audio, sample_rate = sample["audio"]
-        fig, ax = plot_specgram(audio, sample_rate, title=f"spectrogram of {filename}")
-        fig.show()
+    sample = data.__getitem__(3)
+    plot_spectrogram(sample["spect"], sample["sample_rate"], enable_db=True)
+
 
 
