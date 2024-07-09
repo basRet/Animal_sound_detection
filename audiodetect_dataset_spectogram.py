@@ -10,6 +10,10 @@ from matplotlib import pyplot as plt
 
 # import audio
 class animalSoundsDataset(Dataset):
+    #TODO instead of only visualizing them using MEL spectograms,
+    # actually create mel spectograms since this is more understandable for the model too.
+    #TODO add padding in creating the spectograms already. This is because we need this as input for the cnn
+
     def __init__(self, root_dir, transform=None, possible_audio_formats: List[str] = [".wav", ".mp3", ".FLAC"]):
         '''
         create dataset using the .wav files
@@ -163,27 +167,6 @@ def plot_spectrogram(spectrogram, sample_rate, n_fft=800, enable_db=True):
 
     plt.show()
 
-
-
-# for bugfixing, visualise the waves.
 if __name__ == '__main__':
     data = animalSoundsDataset(root_dir="Animal-Sound-Dataset")
     data.average_class_length()
-
-    # test_sample_amount = int(np.floor(len(data)/50))
-    #
-    # sample_array = list()
-    # # get a couple of samples and check shape
-    # for i in range(0, test_sample_amount):
-    #     index = i*50
-    #     sample_data = {
-    #         "sample" :  data.__getitem__(index)["spect"],
-    #         "path" : data.get_full_file_path(index),
-    #         "index": index
-    #     }
-    #     sample_array.append(sample_data)
-    #
-    # sample_df = pd.DataFrame(sample_array)
-    # sample_df["shape"] = sample_df["sample"].apply(lambda x: x.shape)
-    # sample_df["sample"] = 0
-    # print("debug here6")
