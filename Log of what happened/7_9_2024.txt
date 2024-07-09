@@ -1,0 +1,18 @@
+I decided to pad the files in order to enable fixed_length input for the model.
+However, I realised that this might cause the model to be able to predict the class based on how
+long the padding is or how stretched the audio is, considering these are the results after writing some code:
+
+Average length for bird: 296.25888324873097
+Average length for cat: 287.9635416666667
+Average length for chicken: 131.17241379310346
+Average length for cow: 89.21311475409836
+Average length for dog: 177.1627906976744
+Average length for donkey: 68.65
+Average length for frog: 89.125
+Average length for lion: 150.95238095238096
+Average length for monkey: 240.0
+Average length for sheep: 96.43589743589743
+
+I will try to just pad it and see what happens. However, I should be wary if i see high accuracy. In order to test whether
+this causes unreasonable accuracy, I should hand-pick some samples from each class that have the same original length
+and test the accuracy on this.
