@@ -35,6 +35,7 @@ class animalSoundsDataset(Dataset):
         if not torch.is_tensor(waveform):
             waveform = torch.tensor(waveform)
         spectrogram = self.spec_transform(waveform)
+        spectrogram = torchaudio.transforms.AmplitudeToDB()(spectrogram)
         return spectrogram
 
     def __getitem__(self, index):
@@ -51,7 +52,6 @@ class animalSoundsDataset(Dataset):
             sample = self.transform(image)
 
         return sample
-
     def get_files_dataframe(self):
         '''
         creates file paths and labels for every data sample, puts in dataframe
@@ -67,7 +67,6 @@ class animalSoundsDataset(Dataset):
                         # add ID, path as path, animal folder path as label
                         data.append({"path": file_path, "label": os.path.split(animal_folder_path)[1]})
         return pd.DataFrame(data)
-
     def get_filename(self, index):
         '''
         :param index:
@@ -76,7 +75,6 @@ class animalSoundsDataset(Dataset):
         file_path = self.audio_data["path"][index]
         last_dir_in_path = os.path.split(file_path)[1]
         return {last_dir_in_path}
-
     def get_max_item_len(self):
         import heapq
 
@@ -102,7 +100,6 @@ class animalSoundsDataset(Dataset):
         print("5 longest files:")
         for length, filepath in max_lengths:
             print(f"{filepath}: {length}")
-
     def average_class_length(self):
         class_lengths = {}
 
@@ -122,7 +119,6 @@ class animalSoundsDataset(Dataset):
             print(f"Average length for {label}: {avg_length}")
 
         return average_lengths
-
     def get_runtime_error_files(self):
         incor_file_list = list()
         for i in range(0, len(self)):
@@ -133,40 +129,34 @@ class animalSoundsDataset(Dataset):
                 incor_file_list.append(incorrect_file_path)
         print(f"error causing files: {incor_file_list}")
         return incor_file_list
-
     def remove_files(self, list_of_files):
         for item in list_of_files:
             os.remove(item)
-
     def get_full_file_path(self, index):
         return self.audio_data["path"][index]
+    def visualize_spectrogram(self, spectrogram):
+        """
+        Visualizes a spectrogram tensor.
 
-def plot_spectrogram(spectrogram, sample_rate, n_fft=800, enable_db=True):
-    if not torch.is_tensor(spectrogram):
-        spectrogram = torch.tensor(spectrogram)
+        Parameters:
+        spectrogram (torch.Tensor): The spectrogram tensor of shape (1, height, width)
+        """
+        if spectrogram.dim() != 3 or spectrogram.size(0) != 1:
+            raise ValueError("The spectrogram should be of shape (1, height, width)")
 
-    if enable_db:
-        # Converts spectrogram to decibels for better visualization
-        spectrogram_db = torchaudio.transforms.AmplitudeToDB()(spectrogram)
-        plt.figure(figsize=(10, 5))
-        plt.imshow(spectrogram_db[0, :, :].detach().numpy(), cmap='viridis', aspect='auto', origin='lower')
-    else:
-        plt.figure(figsize=(10, 5))
-        plt.imshow(spectrogram[0, :, :].detach().numpy(), cmap='viridis', aspect='auto', origin='lower')
+        # Remove the channel dimension
+        spectrogram = spectrogram.squeeze(0)
 
-    # get only the first audio channel and detach incase pytorch does something fucky to the tensors
-    plt.colorbar(format='%+2.0f dB')
-    plt.title("Spectrogram (dB)")
-    plt.ylabel("Frequency (Hz)")
-    plt.xlabel("Frame")
-
-    # Correct scaling
-    num_freq_bins = spectrogram.shape[1]
-    freqs = np.linspace(0, sample_rate / 2, num_freq_bins)
-    plt.yticks(np.linspace(0, num_freq_bins - 1, 10), labels=np.round(np.linspace(0, sample_rate / 2, 10)).astype(int))
-
-    plt.show()
+        plt.figure(figsize=(10, 4))
+        plt.imshow(spectrogram.numpy(), aspect='auto', origin='lower', cmap='viridis')
+        plt.colorbar(format='%+2.0f dB')
+        plt.title('Spectrogram')
+        plt.xlabel('Time')
+        plt.ylabel('Frequency')
+        plt.tight_layout()
+        plt.show()
 
 if __name__ == '__main__':
     data = animalSoundsDataset(root_dir="Animal-Sound-Dataset")
-    data.average_class_length()
+    test_spect = data.__getitem__(1)['spect']
+    data.visualize_spectrogram(test_spect)
