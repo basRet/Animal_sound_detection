@@ -2,17 +2,15 @@ import torch
 import torchaudio
 
 class animal_audio_classifier(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=10):
         # define all the layers that can possibly be used in the model
         super(animal_audio_classifier, self).__init__()
 
         # TODO improve architecture, i found this at
         # TODO Audio Deep Learning Made Simple: Sound Classification, Step-by-Step
         # TODO on medium, by Ketan Doshi on Mar 18, 2021
-        # It should be an CNN on the spectograms. Input size is (401, max_duration)
-        # couple of RNN layers, then dense layer at the end to classify animal. Perhaps some dense inbetween too
-        # output has softmax for classifiying between 0 and 1
-        # could also just do a CNN on the image
+        # TODO but made it simpler
+        #
         conv_layers = []
 
         # First Convolution Block with Relu and Batch Norm.
@@ -27,9 +25,11 @@ class animal_audio_classifier(torch.nn.Module):
         self.bn2 = torch.nn.BatchNorm2d(16)
         conv_layers += [self.conv2, self.relu2, self.bn2]
 
-        # Linear Classifier
+        # Linear Classifier to get features from 16 to number of classes
         self.ap = torch.nn.AdaptiveAvgPool2d(output_size=1)
-        self.lin = torch.nn.Linear(in_features=16, out_features=10)
+        self.lin = torch.nn.Linear(in_features=16, out_features=num_classes)
+        # softmax ensures probabilities as outputs
+        self.softmax = torch.nn.Softmax(dim=1)
 
         # Wrap the Convolutional Blocks
         self.conv = torch.nn.Sequential(*conv_layers)
@@ -47,6 +47,8 @@ class animal_audio_classifier(torch.nn.Module):
 
         # Linear layer
         x = self.lin(x)
+
+        x = self.softmax(x)
 
         # Final output
         return x

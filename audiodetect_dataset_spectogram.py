@@ -159,4 +159,5 @@ class animalSoundsDataset(Dataset):
 if __name__ == '__main__':
     data = animalSoundsDataset(root_dir="Animal-Sound-Dataset")
     test_spect = data.__getitem__(1)['spect']
+    print(test_spect.shape)
     data.visualize_spectrogram(test_spect)
